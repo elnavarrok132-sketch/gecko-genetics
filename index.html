@@ -2,28 +2,28 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Calculadora Genética Gecko Leopardo</title>
+<title>Calculadora genética – Gecko leopardo</title>
 <style>
-body { 
-  font-family: Arial, sans-serif; 
-  background:#111; 
-  color:#eee; 
-  padding:20px 
-}
-select { 
-  padding:10px; 
-  margin:10px 0; 
-  width:100%; 
-  font-size:16px 
-}
-.box { 
-  background:#1c1c1c; 
-  padding:15px; 
-  margin-top:15px; 
-  border-radius:8px 
+body {
+  font-family: Arial, sans-serif;
+  background:#0f0f0f;
+  color:#eee;
+  padding:20px;
 }
 h1 { color:#6aff9c }
-label { margin-top:10px; display:block }
+label { display:block; margin-top:15px }
+select {
+  width:100%;
+  padding:10px;
+  font-size:16px;
+  margin-top:5px;
+}
+.box {
+  background:#1c1c1c;
+  padding:15px;
+  border-radius:8px;
+  margin-top:15px;
+}
 </style>
 </head>
 
@@ -32,26 +32,10 @@ label { margin-top:10px; display:block }
 <h1>🦎 Calculadora genética – Gecko leopardo</h1>
 
 <label>Macho</label>
-<select id="macho">
-  <option>Inferno</option>
-  <option>Blood</option>
-  <option>Tremper Albino</option>
-  <option>Bell Albino</option>
-  <option>Mack Snow</option>
-  <option>Hypo</option>
-  <option>Enigma</option>
-</select>
+<select id="macho"></select>
 
 <label>Hembra</label>
-<select id="hembra">
-  <option>Inferno</option>
-  <option>Blood</option>
-  <option>Tremper Albino</option>
-  <option>Bell Albino</option>
-  <option>Mack Snow</option>
-  <option>Hypo</option>
-  <option>Enigma</option>
-</select>
+<select id="hembra"></select>
 
 <div class="box" id="resultado">Resultado aparecerá aquí</div>
 <div class="box" id="fases">Fases posibles aparecerán aquí</div>
@@ -59,9 +43,11 @@ label { margin-top:10px; display:block }
 
 <script>
 const SHEET_ID = "10_JEvHlKBpfyHCSWSvdWotYeyuvriE-Qu-Om0ENwRnY";
+const SHEET_NAME = "Hoja 1";
 
-function actualizar(){
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=api`;
+// cargar fases desde Sheets
+function cargarFases(){
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
 
   fetch(url)
     .then(res => res.text())
@@ -69,14 +55,43 @@ function actualizar(){
       const json = JSON.parse(text.substring(47).slice(0, -2));
       const rows = json.table.rows;
 
-      document.getElementById("resultado").innerText = rows[2].c[0].v;
-      document.getElementById("fases").innerText = rows[4].c[0].v;
-      document.getElementById("avisos").innerText = rows[6].c[0].v;
+      const fases = new Set();
+
+      rows.forEach(r => {
+        if (r.c[1] && r.c[1].v) fases.add(r.c[1].v);
+      });
+
+      const macho = document.getElementById("macho");
+      const hembra = document.getElementById("hembra");
+
+      fases.forEach(f => {
+        macho.add(new Option(f, f));
+        hembra.add(new Option(f, f));
+      });
     });
 }
 
-document.querySelectorAll("select").forEach(s=>{
-  s.addEventListener("change", actualizar)
+// leer resultado del simulador
+function actualizar(){
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=simulador`;
+
+  fetch(url)
+    .then(res => res.text())
+    .then(text => {
+      const json = JSON.parse(text.substring(47).slice(0, -2));
+      const rows = json.table.rows;
+
+      document.getElementById("resultado").innerText = rows[5].c[0].v;
+      document.getElementById("fases").innerText = rows[7].c[0].v;
+      document.getElementById("avisos").innerText = rows[9].c[0].v;
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  cargarFases();
+  document.querySelectorAll("select").forEach(s =>
+    s.addEventListener("change", actualizar)
+  );
 });
 </script>
 
