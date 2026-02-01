@@ -4,53 +4,80 @@
 <meta charset="UTF-8">
 <title>Calculadora Genética Gecko Leopardo</title>
 <style>
-body { font-family: Arial; background:#111; color:#eee; padding:20px }
-select { padding:10px; margin:10px 0; width:100% }
-.box { background:#1c1c1c; padding:15px; margin-top:15px; border-radius:8px }
+body { 
+  font-family: Arial, sans-serif; 
+  background:#111; 
+  color:#eee; 
+  padding:20px 
+}
+select { 
+  padding:10px; 
+  margin:10px 0; 
+  width:100%; 
+  font-size:16px 
+}
+.box { 
+  background:#1c1c1c; 
+  padding:15px; 
+  margin-top:15px; 
+  border-radius:8px 
+}
 h1 { color:#6aff9c }
+label { margin-top:10px; display:block }
 </style>
 </head>
+
 <body>
 
 <h1>🦎 Calculadora genética – Gecko leopardo</h1>
 
 <label>Macho</label>
 <select id="macho">
-<option>Inferno</option>
-<option>Blood</option>
-<option>Tremper Albino</option>
-<option>Bell Albino</option>
-<option>Mack Snow</option>
-<option>Hypo</option>
-<option>Enigma</option>
+  <option>Inferno</option>
+  <option>Blood</option>
+  <option>Tremper Albino</option>
+  <option>Bell Albino</option>
+  <option>Mack Snow</option>
+  <option>Hypo</option>
+  <option>Enigma</option>
 </select>
 
 <label>Hembra</label>
 <select id="hembra">
-<option>Inferno</option>
-<option>Blood</option>
-<option>Tremper Albino</option>
-<option>Bell Albino</option>
-<option>Mack Snow</option>
-<option>Hypo</option>
-<option>Enigma</option>
+  <option>Inferno</option>
+  <option>Blood</option>
+  <option>Tremper Albino</option>
+  <option>Bell Albino</option>
+  <option>Mack Snow</option>
+  <option>Hypo</option>
+  <option>Enigma</option>
 </select>
 
-<div class="box" id="resultado">
-Selecciona macho y hembra
-</div>
+<div class="box" id="resultado">Resultado aparecerá aquí</div>
+<div class="box" id="fases">Fases posibles aparecerán aquí</div>
+<div class="box" id="avisos">Avisos aparecerán aquí</div>
 
 <script>
-document.querySelectorAll("select").forEach(s=>{
-  s.addEventListener("change",calcular)
-})
+const SHEET_ID = "10_JEvHlKBpfyHCSWSvdWotYeyuvriE-Qu-Om0ENwRnY";
 
-function calcular(){
-  let m = document.getElementById("macho").value
-  let h = document.getElementById("hembra").value
-  document.getElementById("resultado").innerHTML =
-  "Cruce seleccionado: <b>" + m + " × " + h + "</b><br><br>(Conectando con el simulador...)"
+function actualizar(){
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=api`;
+
+  fetch(url)
+    .then(res => res.text())
+    .then(text => {
+      const json = JSON.parse(text.substring(47).slice(0, -2));
+      const rows = json.table.rows;
+
+      document.getElementById("resultado").innerText = rows[2].c[0].v;
+      document.getElementById("fases").innerText = rows[4].c[0].v;
+      document.getElementById("avisos").innerText = rows[6].c[0].v;
+    });
 }
+
+document.querySelectorAll("select").forEach(s=>{
+  s.addEventListener("change", actualizar)
+});
 </script>
 
 </body>
