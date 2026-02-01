@@ -1,11 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Gecko Genetics</title>
+<title>Calculadora Genética Gecko Leopardo</title>
+<style>
+body { font-family: Arial; background:#111; color:#eee; padding:20px }
+select { padding:10px; margin:10px 0; width:100% }
+.box { background:#1c1c1c; padding:15px; margin-top:15px; border-radius:8px }
+h1 { color:#6aff9c }
+</style>
 </head>
-<body style="background:#111;color:#fff;font-family:Arial">
-<h1>Gecko Genetics</h1>
-<p>La web funciona correctamente.</p>
+<body>
+
+<h1>🦎 Calculadora genética – Gecko leopardo</h1>
+
+<label>Macho</label>
+<select id="macho">
+<option>Inferno</option>
+<option>Blood</option>
+<option>Tremper Albino</option>
+<option>Bell Albino</option>
+<option>Mack Snow</option>
+<option>Hypo</option>
+<option>Enigma</option>
+</select>
+
+<label>Hembra</label>
+<select id="hembra">
+<option>Inferno</option>
+<option>Blood</option>
+<option>Tremper Albino</option>
+<option>Bell Albino</option>
+<option>Mack Snow</option>
+<option>Hypo</option>
+<option>Enigma</option>
+</select>
+
+<div class="box" id="resultado">
+Selecciona macho y hembra
+</div>
+
+<script>
+document.querySelectorAll("select").forEach(s=>{
+  s.addEventListener("change",calcular)
+})
+
+function calcular(){
+  let m = document.getElementById("macho").value
+  let h = document.getElementById("hembra").value
+  document.getElementById("resultado").innerHTML =
+  "Cruce seleccionado: <b>" + m + " × " + h + "</b><br><br>(Conectando con el simulador...)"
+}
+</script>
+
 </body>
 </html>
