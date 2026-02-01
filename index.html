@@ -3,24 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <title>Calculadora genética – Gecko leopardo</title>
+
 <style>
-body {
+body{
   background:#0f0f0f;
   color:#eaeaea;
-  font-family:system-ui;
+  font-family:system-ui, Arial, sans-serif;
   padding:20px;
 }
-h1 { color:#4cff4c; }
-select, .box {
+h1{ color:#4cff4c; }
+label{ display:block; margin-top:15px }
+select{
   width:100%;
   padding:10px;
-  margin:8px 0;
+  margin-top:5px;
   border-radius:8px;
   border:none;
   background:#1e1e1e;
   color:#fff;
+  font-size:16px;
 }
-.box { min-height:50px; }
+.box{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:8px;
+  background:#1c1c1c;
+  white-space:pre-line;
+}
 </style>
 </head>
 
@@ -35,7 +45,8 @@ select, .box {
 <select id="hembra"></select>
 
 <div class="box" id="resultado"><b>Resultado genético:</b></div>
-<div class="box" id="fases"><b>Fases posibles:</b></div>
+<div class="box" id="porcentajes"><b>Porcentajes:</b></div>
+<div class="box" id="nombres"><b>Nombres completos:</b></div>
 <div class="box" id="avisos"><b>Avisos:</b></div>
 
 <script>
@@ -44,14 +55,18 @@ const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:
 
 let fases = [];
 
+/* ======================
+   CARGA DE FASES
+====================== */
 fetch(URL)
   .then(r => r.text())
   .then(t => {
     const json = JSON.parse(t.substr(47).slice(0,-2));
     json.table.rows.forEach(r=>{
+      if(!r.c[1] || !r.c[2]) return;
       fases.push({
-        fase:r.c[1]?.v,
-        tipo:r.c[2]?.v.toLowerCase()
+        fase: r.c[1].v,
+        tipo: r.c[2].v.toLowerCase()
       });
     });
     cargarSelects();
@@ -61,8 +76,8 @@ function cargarSelects(){
   const macho = document.getElementById("macho");
   const hembra = document.getElementById("hembra");
   fases.forEach(f=>{
-    macho.innerHTML += `<option>${f.fase}</option>`;
-    hembra.innerHTML += `<option>${f.fase}</option>`;
+    macho.add(new Option(f.fase,f.fase));
+    hembra.add(new Option(f.fase,f.fase));
   });
   macho.onchange = hembra.onchange = calcular;
   calcular();
@@ -72,45 +87,96 @@ function tipoDe(fase){
   return fases.find(f=>f.fase===fase)?.tipo;
 }
 
+/* ======================
+   CÁLCULO PRINCIPAL
+====================== */
 function calcular(){
   const m = document.getElementById("macho").value;
   const h = document.getElementById("hembra").value;
   const tm = tipoDe(m);
   const th = tipoDe(h);
 
-  let res = "Combinación no contemplada.";
-  let fasesTxt = "";
-  let aviso = "";
+  let resultado = "";
+  let porcentajes = "";
+  let nombres = [];
+  let avisos = [];
 
+  /* ===== RECESIVO ===== */
   if(tm==="recesivo" && th==="recesivo"){
-    res = "Cruce recesivo x recesivo";
-    fasesTxt = "25 % visual · 50 % het · 25 % normal";
-    if(m!==h) aviso = "⚠️ Recesivos distintos: NO habrá visuales.";
+    resultado = "Cruce recesivo × recesivo";
+    if(m===h){
+      porcentajes = "25 % visual · 50 % heterocigoto · 25 % normal";
+      nombres = ["Normal","Het "+m,m];
+    }else{
+      porcentajes = "0 % visual · 100 % heterocigotos";
+      nombres = ["Normal","Het "+m,"Het "+h];
+      avisos.push("⚠️ Recesivos distintos: no habrá visuales.");
+    }
   }
-  else if(tm==="codominante" || th==="codominante"){
-    res = "Cruce codominante";
-    fasesTxt = "25 % super · 50 % intermedio · 25 % normal";
+
+  /* ===== CODOMINANTE ===== */
+  else if(tm==="codominante" && th==="codominante"){
+    resultado = "Cruce codominante × codominante";
+    if(m===h){
+      porcentajes = "25 % super · 50 % intermedio · 25 % normal";
+      nombres = ["Normal",m,"Super "+m];
+    }else{
+      porcentajes = "25 % combinación · 50 % intermedios · 25 % normales";
+      nombres = [m,h,m+" "+h];
+    }
   }
+
+  /* ===== DOMINANTE ===== */
   else if(tm==="dominante" || th==="dominante"){
-    res = "Cruce dominante";
-    fasesTxt = "~50 % expresarán el rasgo";
+    const d = tm==="dominante" ? m : h;
+    resultado = "Cruce con gen dominante";
+    porcentajes = "≈50 % expresarán el rasgo dominante";
+    nombres = ["Normal",d];
   }
-  else if(tm==="poligénico" && th==="poligénico"){
-    res = "Cruce poligénico";
-    fasesTxt = "Variabilidad alta (sin porcentajes fijos)";
+
+  /* ===== POLIGÉNICO ===== */
+  else if(tm==="poligénico" || th==="poligénico"){
+    resultado = "Cruce poligénico";
+    porcentajes = "Sin porcentajes fijos (expresión variable)";
+    nombres = ["Normal",m+" "+h];
+    avisos.push("ℹ️ Rasgo poligénico: resultado variable.");
   }
+
+  /* ===== MIXTO ===== */
   else{
-    res = "Cruce mixto";
-    fasesTxt = "Posibles portadores + expresión variable";
+    resultado = "Cruce mixto";
+    porcentajes = "Expresión variable con posibles portadores";
+    nombres = ["Normal",m+" "+h];
   }
 
-  if((m.includes("Tremper") && h.includes("Bell")) || (m.includes("Bell") && h.includes("Tremper"))){
-    aviso = "❌ Tremper y Bell NO deben cruzarse";
+  /* ===== AVISOS INTELIGENTES ===== */
+  if(
+    (m.includes("Tremper") && h.includes("Bell")) ||
+    (m.includes("Bell") && h.includes("Tremper"))
+  ){
+    avisos.push("❌ Tremper y Bell NO deben cruzarse.");
   }
 
-  document.getElementById("resultado").innerHTML = "<b>Resultado genético:</b> " + res;
-  document.getElementById("fases").innerHTML = "<b>Fases posibles:</b> " + fasesTxt;
-  document.getElementById("avisos").innerHTML = "<b>Avisos:</b> " + (aviso || "Ninguno");
+  if(m.includes("Enigma") || h.includes("Enigma")){
+    avisos.push("⚠️ Enigma: posible riesgo neurológico.");
+  }
+
+  if(m===h){
+    avisos.push("ℹ️ Cruce lineal: vigilar consanguinidad.");
+  }
+
+  /* ===== SALIDA ===== */
+  document.getElementById("resultado").innerHTML =
+    "<b>Resultado genético:</b> " + resultado;
+
+  document.getElementById("porcentajes").innerHTML =
+    "<b>Porcentajes:</b> " + porcentajes;
+
+  document.getElementById("nombres").innerHTML =
+    "<b>Nombres completos:</b><br>• " + nombres.join("<br>• ");
+
+  document.getElementById("avisos").innerHTML =
+    "<b>Avisos:</b><br>• " + (avisos.length ? avisos.join("<br>• ") : "Ninguno");
 }
 </script>
 
