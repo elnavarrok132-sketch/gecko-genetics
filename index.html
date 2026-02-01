@@ -3,29 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <title>Calculadora genética – Gecko leopardo</title>
-
 <style>
-body{
-  font-family: Arial, sans-serif;
+body {
   background:#0f0f0f;
-  color:#eee;
+  color:#eaeaea;
+  font-family:system-ui;
   padding:20px;
 }
-h1{ color:#6aff9c }
-label{ display:block; margin-top:15px }
-select{
+h1 { color:#4cff4c; }
+select, .box {
   width:100%;
   padding:10px;
-  font-size:16px;
-  margin-top:5px;
-}
-.box{
-  background:#1c1c1c;
-  padding:15px;
+  margin:8px 0;
   border-radius:8px;
-  margin-top:15px;
-  white-space:pre-line;
+  border:none;
+  background:#1e1e1e;
+  color:#fff;
 }
+.box { min-height:50px; }
 </style>
 </head>
 
@@ -39,71 +34,84 @@ select{
 <label>Hembra</label>
 <select id="hembra"></select>
 
-<div class="box" id="resultado">—</div>
-<div class="box" id="fases">—</div>
-<div class="box" id="avisos">—</div>
+<div class="box" id="resultado"><b>Resultado genético:</b></div>
+<div class="box" id="fases"><b>Fases posibles:</b></div>
+<div class="box" id="avisos"><b>Avisos:</b></div>
 
 <script>
 const SHEET_ID = "10_JEvHlKBpfyHCSWSvdWotYeyuvriE-Qu-Om0ENwRnY";
+const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
-// Cargar fases (Hoja 1, columna B)
-function cargarFases(){
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Hoja 1`;
+let fases = [];
 
-  fetch(url)
-    .then(r=>r.text())
-    .then(t=>{
-      const json = JSON.parse(t.substring(47).slice(0,-2));
-      const rows = json.table.rows;
-      const set = new Set();
-
-      rows.forEach(r=>{
-        if(r.c[1] && r.c[1].v) set.add(r.c[1].v);
-      });
-
-      const macho = document.getElementById("macho");
-      const hembra = document.getElementById("hembra");
-
-      set.forEach(f=>{
-        macho.add(new Option(f,f));
-        hembra.add(new Option(f,f));
+fetch(URL)
+  .then(r => r.text())
+  .then(t => {
+    const json = JSON.parse(t.substr(47).slice(0,-2));
+    json.table.rows.forEach(r=>{
+      fases.push({
+        fase:r.c[1]?.v,
+        tipo:r.c[2]?.v.toLowerCase()
       });
     });
-}
-
-// Leer simulador
-function actualizar(){
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=simulador`;
-
-  fetch(url)
-    .then(r=>r.text())
-    .then(t=>{
-      const json = JSON.parse(t.substring(47).slice(0,-2));
-      const rows = json.table.rows;
-
-      let resultado="—", fases="—", avisos="—";
-
-      rows.forEach(r=>{
-        if(!r.c[0]) return;
-        const k = r.c[0].v.toLowerCase();
-
-        if(k==="resultado") resultado = r.c[1]?.v || "—";
-        if(k==="fases") fases = r.c[1]?.v || "—";
-        if(k==="avisos") avisos = r.c[1]?.v || "—";
-      });
-
-      document.getElementById("resultado").innerText = resultado;
-      document.getElementById("fases").innerText = fases;
-      document.getElementById("avisos").innerText = avisos;
-    });
-}
-
-document.addEventListener("DOMContentLoaded", ()=>{
-  cargarFases();
-  document.querySelectorAll("select").forEach(s=>{
-    s.addEventListener("change", actualizar);
+    cargarSelects();
   });
-});
+
+function cargarSelects(){
+  const macho = document.getElementById("macho");
+  const hembra = document.getElementById("hembra");
+  fases.forEach(f=>{
+    macho.innerHTML += `<option>${f.fase}</option>`;
+    hembra.innerHTML += `<option>${f.fase}</option>`;
+  });
+  macho.onchange = hembra.onchange = calcular;
+  calcular();
+}
+
+function tipoDe(fase){
+  return fases.find(f=>f.fase===fase)?.tipo;
+}
+
+function calcular(){
+  const m = document.getElementById("macho").value;
+  const h = document.getElementById("hembra").value;
+  const tm = tipoDe(m);
+  const th = tipoDe(h);
+
+  let res = "Combinación no contemplada.";
+  let fasesTxt = "";
+  let aviso = "";
+
+  if(tm==="recesivo" && th==="recesivo"){
+    res = "Cruce recesivo x recesivo";
+    fasesTxt = "25 % visual · 50 % het · 25 % normal";
+    if(m!==h) aviso = "⚠️ Recesivos distintos: NO habrá visuales.";
+  }
+  else if(tm==="codominante" || th==="codominante"){
+    res = "Cruce codominante";
+    fasesTxt = "25 % super · 50 % intermedio · 25 % normal";
+  }
+  else if(tm==="dominante" || th==="dominante"){
+    res = "Cruce dominante";
+    fasesTxt = "~50 % expresarán el rasgo";
+  }
+  else if(tm==="poligénico" && th==="poligénico"){
+    res = "Cruce poligénico";
+    fasesTxt = "Variabilidad alta (sin porcentajes fijos)";
+  }
+  else{
+    res = "Cruce mixto";
+    fasesTxt = "Posibles portadores + expresión variable";
+  }
+
+  if((m.includes("Tremper") && h.includes("Bell")) || (m.includes("Bell") && h.includes("Tremper"))){
+    aviso = "❌ Tremper y Bell NO deben cruzarse";
+  }
+
+  document.getElementById("resultado").innerHTML = "<b>Resultado genético:</b> " + res;
+  document.getElementById("fases").innerHTML = "<b>Fases posibles:</b> " + fasesTxt;
+  document.getElementById("avisos").innerHTML = "<b>Avisos:</b> " + (aviso || "Ninguno");
+}
 </script>
 
 </body>
